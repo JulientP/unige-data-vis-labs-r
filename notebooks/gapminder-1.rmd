@@ -12,20 +12,12 @@ knitr::opts_chunk$set(
 )
 
 library(tidyr)
-library(readr)
 library(dplyr)
 library(ggplot2)
+
+source(here::here('notebooks', 'utils.R'))
 ```
-```{r}
-read_csv_locale <- function(file, ...) {
-  readr::read_csv(
-    file = file,
-    locale = readr::locale(decimal_mark = ".", grouping_mark = ","),
-    show_col_types = FALSE,
-    ...
-  )
-}
-```
+
 
 # Data loading
 ```{r}
