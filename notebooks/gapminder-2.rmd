@@ -35,7 +35,6 @@ feature.names <- colnames(t.features)[seq(3, ncol(t.features), 2)]
 #  - population total from t.misc
 #  - compute poprural as the difference between the country total and the sum in city
 #  - rename time to year, name to country
-# -  add a caption with the source
 t.all = t.features |>
   left_join(t.countries|> select(country, name, world_6region), by = 'country')|>
   left_join(t.misc |> select(country, time, pop), by = c('time', 'country')) |>
@@ -72,8 +71,13 @@ t.long <- t.all |>
 
 # World Rural Exodus
 
-```{r}
 
+```{r}
+# -  add labels
+#   - title
+#   - x = "Year",
+#   - y = Population
+#   - y ticks labels with a 'M' appended
 ggplot(
   data = t.long |> filter(country == 'Ethiopia'),
   mapping = aes(
