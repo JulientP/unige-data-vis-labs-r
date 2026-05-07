@@ -34,7 +34,8 @@ feature.names <- colnames(t.features)[seq(3, ncol(t.features), 2)]
 #  - some country info from t.country
 #  - population total from t.misc
 #  - compute poprural as the difference between the country total and the sum in city
-# rename time to year, name to country
+#  - rename time to year, name to country
+# -  add a caption with the source
 t.all = t.features |>
   left_join(t.countries|> select(country, name, world_6region), by = 'country')|>
   left_join(t.misc |> select(country, time, pop), by = c('time', 'country')) |>
