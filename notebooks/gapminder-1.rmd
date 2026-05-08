@@ -107,9 +107,10 @@ ggplot(
 ## Mutliple countries
 
 Goal:
- - add one color for each country.
- - the legend for colors must say: "Country"
- - write a caption to tell the story.
+
+- Add one color for each country.
+- The legend for colors must say: "Country"
+- Write a caption to tell the story.
   
 ```{r multiple_countries}
 ggplot(
@@ -135,16 +136,14 @@ ggplot(
   )
 ```
 
-
-```
-
 ## Child death under 5 vs wealth inequality (Gini coefficient)
 
 Goal:
- - snapshot in 2021
- - x/y with the title metrics
- - circle size with the population
- - color with the region (4 levels)
+
+- Snapshot in 2021
+- X/Y with the title metrics
+- Circle size with the population
+- Color with the region (4 levels)
 
 ```{r child_death_gini}
 ggplot(
