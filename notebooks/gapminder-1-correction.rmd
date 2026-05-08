@@ -12,12 +12,20 @@ knitr::opts_chunk$set(
 )
 
 library(tidyr)
+library(readr)
 library(dplyr)
 library(ggplot2)
-
-source(here::here('notebooks', 'utils.R'))
 ```
-
+```{r}
+read_csv_locale <- function(file, ...) {
+  readr::read_csv(
+    file = file,
+    locale = readr::locale(decimal_mark = ".", grouping_mark = ","),
+    show_col_types = FALSE,
+    ...
+  )
+}
+```
 
 # Data loading
 ```{r}
@@ -80,37 +88,6 @@ ggplot(
   mapping = aes(
     x = time,
     y = lex,
-    # lty = lex_is_forecast
-  )
-) +
-  geom_line(lwd = 1.5) +
-  # theme_minimal(base_size = 16) +
-  # scale_linetype_discrete(labels = c("Observation", "Forecast")) +
-  labs(
-    title = 'Switzerland life expectancy over time',
-    subtitle = 'Gapminder publishe observations and forecasts',
-    x = 'Year',
-    y = 'Life expectancy (year)',
-    # lty = ''
-  )
-
-```
-
-## Mutliple countries
-
-Goal:
-
-- Add one color for each country.
-- The legend for colors must say: "Country"
-- Write a caption to tell the story.
-  
-```{r multiple_countries}
-ggplot(
-  data = t.all |> filter(name %in% c('Switzerland', 'Ethiopia')),
-  mapping = aes(
-    x = time,
-    y = lex,
-    color = name,
     lty = lex_is_forecast
   )
 ) +
@@ -118,43 +95,78 @@ ggplot(
   theme_minimal(base_size = 16) +
   scale_linetype_discrete(labels = c("Observation", "Forecast")) +
   labs(
-    title = 'Switzerland and Ethiopia life expectancy over time',
-    subtitle = 'Gapminder observations and forecasts',
+    title = 'Switzerland life expectancy over time',
+    subtitle = 'Gapminder publishe observations and forecasts',
     x = 'Year',
-    y = 'Life expectancy (years)',
-    color = 'Country',
-    lty = '',
-    caption = 'Switzerland has maintained high life expectancy around 80+ years, while Ethiopia shows rapid improvement from ~35 to ~70 years over the past 200 years.'
+    y = 'Life expectancy (year)',
+    lty = ''
   )
+
+```
+
+## Mutliple countries
+
+Goal:
+ - add one color for each country.
+ - the legend for colors must say: "Country"
+
+```{r}
+
+ggplot(
+  data = t.all |> filter(name %in% c('Switzerland', 'Ethiopia')),
+  mapping = aes(
+    x = time,
+    y = lex,
+    lty = lex_is_forecast,
+    colour = country
+  )
+) +
+  geom_line(lwd = 1.5) +
+  theme_minimal(base_size = 16) +
+  scale_linetype_discrete(labels = c("Observation", "Forecast")) +
+  labs(
+    title = 'Switzerland and Ethiopia life expectancy over time',
+    subtitle = 'Gapminder publishe observations and forecasts',
+    x = 'Year',
+    y = 'Life expectancy (year)',
+    lty = '',
+    colour='Country'
+  )
+
 ```
 
 ## Child death under 5 vs wealth inequality (Gini coefficient)
 
 Goal:
+ - snapshot in 2021
+ - x/y with the title metrics
+ - circle size with the population
+ - color with the region (4 levels)
 
-- Snapshot in 2021
-- X/Y with the title metrics
-- Circle size with the population
-- Color with the region (4 levels)
+```{r}
 
-```{r child_death_gini}
 ggplot(
   data = t.all |> filter(time == 2021),
   mapping = aes(
     x = child_mortality_0_5_year_olds_dying_per_1000_born,
     y = gini,
-    size = pop,
-    color = world_4region
   )
 ) +
-  geom_point(alpha = 0.6) +
-  theme_minimal(base_size = 14) +
-  scale_size_continuous(name = 'Population', labels = scales::label_number(scale = 1e-6, suffix = 'M')) +
+  geom_point(
+    mapping = aes(
+      size = pop,
+      colour = world_4region
+    )
+  ) +
+  theme_minimal(base_size = 16) +
   labs(
-    title = 'Child mortality vs wealth inequality (2021)',
-    subtitle = 'Circle size represents population',
-    x = 'Child mortality (deaths per 1000 born)',
-    y = 'Gini coefficient (wealth inequality)',
-    color = 'Region'
+    title = 'Is child death correlated with wealth inequality?',
+    subtitle = 'Gapminder measures, 2021',
+    x = 'child mortality under 5 years/1000 born',
+    y = 'Gini coeficient'
+
   )
+
+
+
 ```

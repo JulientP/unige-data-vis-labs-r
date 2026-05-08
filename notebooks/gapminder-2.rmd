@@ -1,0 +1,94 @@
+---
+title: "R Notebook"
+output: html_document
+---
+
+```{r package_setup, echo = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+knitr::opts_chunk$set(
+  fig.width = 9,   # increase width
+  fig.height = 9,
+  out.width = "100%"   # VERY IMPORTANT
+)
+
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(forcats)
+
+source(here::here('notebooks', 'utils.R'))
+```
+
+
+```{r}
+t.features = read_csv_locale(here::here('data', 'gapminder-popcit.csv'))
+t.misc = read_csv_locale(here::here('data', 'gapminder-misc.csv'))
+t.countries = read_csv_locale(here::here('data', 'gapminder-countries.csv'))
+
+# skip forecast columns
+feature.names <- colnames(t.features)[seq(3, ncol(t.features), 2)]
+# we group buiéd t.all with:
+#.  - join all table on country ( + year)
+#  - features from features.names
+#  - some country info from t.country
+#  - population total from t.misc
+#  - compute poprural as the difference between the country total and the sum in city
+#  - rename time to year, name to country
+t.all = t.features |>
+  left_join(t.countries|> select(country, name, world_6region), by = 'country')|>
+  left_join(t.misc |> select(country, time, pop), by = c('time', 'country')) |>
+  rowwise() |>
+  mutate(poprural = sum(pop - sum(c_across(all_of(unlist(feature.names)))))) |>
+  ungroup() |>
+  select(-country) |>
+  rename(
+    year = time,
+    country = name,
+  )
+
+feature.names = c(feature.names, "poprural")
+cols.data = c("year", "country", "world_6region", "pop", feature.names)
+t.all <- t.all[, cols.data]
+t.long <- t.all |>
+  pivot_longer(cols = all_of(feature.names), names_to = "category", values_to = "n") |>
+  # filter(n != 0)|>
+  # reorder the levels in ascending order
+  mutate(category = fct_relevel(category, "poprural", "popcit_less_300k", "popcit_300_500k", "popcit_500k_1m", "popcit_1_5m", "popcit_5_10m", "popcit_more_10m")) |>
+  # alter the names to more readable strings
+  mutate(category = fct_recode(
+    category,
+    "Rural" = "poprural",
+    "<300k" = "popcit_less_300k",
+    "300-500k" = "popcit_300_500k",
+    "500k-1M" = "popcit_500k_1m",
+    "1-5M" = "popcit_1_5m",
+    "5-10M" = "popcit_5_10m",
+    ">10M" = "popcit_more_10m",
+  ))
+
+```
+
+# World Rural Exodus
+
+
+```{r}
+# -  add labels
+#   - title
+#   - x = "Year",
+#   - y = Population
+#   - y ticks labels with a 'M' appended
+ggplot(
+  data = t.long |> filter(country == 'Ethiopia'),
+  mapping = aes(
+    x = year,
+    y = n,
+    colour = category
+  )
+) +
+  geom_line(
+    lwd = 2,
+    position = "stack"
+  ) +
+  theme_minimal(base_size = 22)
+```
