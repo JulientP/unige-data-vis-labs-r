@@ -110,15 +110,15 @@ Goal:
  - add one color for each country.
  - the legend for colors must say: "Country"
  - write a caption to tell the story.
-
-```{r}
-
+  
+```{r multiple_countries}
 ggplot(
   data = t.all |> filter(name %in% c('Switzerland', 'Ethiopia')),
   mapping = aes(
     x = time,
     y = lex,
-    lty = lex_is_forecast,
+    color = name,
+    lty = lex_is_forecast
   )
 ) +
   geom_line(lwd = 1.5) +
@@ -126,11 +126,15 @@ ggplot(
   scale_linetype_discrete(labels = c("Observation", "Forecast")) +
   labs(
     title = 'Switzerland and Ethiopia life expectancy over time',
-    subtitle = 'Gapminder publishe observations and forecasts',
+    subtitle = 'Gapminder observations and forecasts',
     x = 'Year',
-    y = 'Life expectancy (year)',
+    y = 'Life expectancy (years)',
+    color = 'Country',
     lty = '',
+    caption = 'Switzerland has maintained high life expectancy around 80+ years, while Ethiopia shows rapid improvement from ~35 to ~70 years over the past 200 years.'
   )
+```
+
 
 ```
 
@@ -142,3 +146,24 @@ Goal:
  - circle size with the population
  - color with the region (4 levels)
 
+```{r child_death_gini}
+ggplot(
+  data = t.all |> filter(time == 2021),
+  mapping = aes(
+    x = child_mortality_0_5_year_olds_dying_per_1000_born,
+    y = gini,
+    size = pop,
+    color = world_4region
+  )
+) +
+  geom_point(alpha = 0.6) +
+  theme_minimal(base_size = 14) +
+  scale_size_continuous(name = 'Population', labels = scales::label_number(scale = 1e-6, suffix = 'M')) +
+  labs(
+    title = 'Child mortality vs wealth inequality (2021)',
+    subtitle = 'Circle size represents population',
+    x = 'Child mortality (deaths per 1000 born)',
+    y = 'Gini coefficient (wealth inequality)',
+    color = 'Region'
+  )
+```
