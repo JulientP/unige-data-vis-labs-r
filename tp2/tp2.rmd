@@ -1,0 +1,137 @@
+---
+title: "Exploration des accidents de la route genevoise en 2024"
+output: pdf_document
+---
+```{r package_setup, echo = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+knitr::opts_chunk$set(
+  fig.width = 9,   # increase width
+  fig.height = 9,
+  out.width = "100%"   # VERY IMPORTANT
+)
+
+library(tidyr)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(sf)
+library(lubridate)
+library(here)
+```
+```{r data_import, include = FALSE}
+# Load the shapefile
+accidents <- st_read(here::here('tp2/OTC_ACCIDENTS-SHP/OTC_ACCIDENTS.shp'))
+```
+
+```{r data_processing_2024, include = FALSE}
+# Load and explore the data structure
+str(accidents)
+head(accidents, 5)
+```
+
+```{r data_processing_2024_filter, include = FALSE}
+# Filter for 2024 using the ANNEE column
+accidents_2024 <- accidents %>%
+  filter(ANNEE == 2024)
+
+# Create a summary by cause
+# Calculate: killed, injured (light + serious), simple crashes (no casualties)
+accident_summary <- accidents_2024 %>%
+  st_drop_geometry() %>%
+  group_by(CAUSE) %>%
+  summarise(
+    severe = sum(TUES, na.rm = TRUE) + sum(BLES_GRA, na.rm = TRUE),
+    light_injured = sum(BLES_LEG, na.rm = TRUE),
+    simple_crash = sum((TUES == 0 & BLES_LEG == 0 & BLES_GRA == 0), na.rm = TRUE),
+    total_accidents = n(),
+    .groups = 'drop'
+  ) %>%
+  arrange(desc(total_accidents)) %>%
+  slice(1:10)  # Keep only top 10 causes
+```
+
+```{r summary_stats}
+# Calculate key statistics
+total_deaths <- sum(accidents_2024$TUES, na.rm = TRUE)
+total_injured <- sum(accidents_2024$BLES_LEG, na.rm = TRUE) + sum(accidents_2024$BLES_GRA, na.rm = TRUE)
+total_accidents <- nrow(accidents_2024)
+```
+
+## Principaux résultats - 2024
+
+- **Total des accidents:** `r total_accidents`
+- **Total des décès:** `r total_deaths`
+- **Total des blessés:** `r total_injured`
+
+```{r plot_accidents_by_cause, fig.height = 6}
+# Prepare data for vertical bar plot
+plot_data <- accident_summary %>%
+  pivot_longer(
+    cols = c(severe, light_injured, simple_crash),
+    names_to = "consequence",
+    values_to = "count"
+  ) %>%
+  mutate(
+    consequence = factor(consequence, levels = c("simple_crash", "light_injured", "severe")),
+    # Reorder causes by total accidents
+    CAUSE = reorder(CAUSE, total_accidents, FUN = function(x) -x[1])
+  )
+
+# Create vertical bar plot
+ggplot(plot_data, aes(x = CAUSE, y = count, fill = consequence)) +
+  geom_col(position = "stack") +
+  scale_fill_manual(
+    values = c("simple_crash" = "#FFA500", "light_injured" = "#FF6B6B", "severe" = "#8B0000"),
+    labels = c("simple_crash" = "Accident simple", "light_injured" = "Blessures légères", "severe" = "Grave/Décès")
+  ) +
+  labs(
+    title = "Accidents de la route genevoise en 2024 par cause",
+    x = "Cause de l'accident",
+    y = "Nombre d'accidents",
+    fill = "Conséquence"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 8, angle = 45, hjust = 1),
+    axis.text.y = element_text(size = 9),
+    legend.position = "bottom"
+  )
+```
+
+```{r map_accidents_2024}
+# Create map of accident locations with severity coloring
+# Add severity category to accidents_2024
+accidents_2024_severity <- accidents_2024 %>%
+  mutate(
+    severity = case_when(
+      TUES > 0 | BLES_GRA > 0 ~ "Grave",
+      BLES_LEG > 0 ~ "Léger",
+      TRUE ~ "Simple"
+    ),
+    severity = factor(severity, levels = c("Simple", "Léger", "Grave"))
+  )
+
+# Filter out any geometry issues
+accidents_2024_valid <- accidents_2024_severity[!is.na(st_geometry(accidents_2024_severity)), ]
+
+# Create the map
+ggplot(accidents_2024_valid) +
+  geom_sf(aes(color = severity), size = 2, alpha = 0.6) +
+  scale_color_manual(
+    values = c("Simple" = "#FFA500", "Léger" = "#FF6B6B", "Grave" = "#8B0000"),
+    labels = c("Simple" = "Accident simple", "Léger" = "Blessures légères", "Grave" = "Grave/Décès")
+  ) +
+  labs(
+    title = "Localisation des accidents de la route genevoise en 2024",
+    subtitle = "Coordonnées CH1903+ / LV95",
+    color = "Gravité"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size = 10),
+    legend.position = "bottom"
+  ) +
+  coord_sf()
+```
