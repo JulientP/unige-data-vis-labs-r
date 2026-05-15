@@ -2,6 +2,14 @@
 title: "Exploration des accidents de la route genevoise en 2024"
 output: pdf_document
 ---
+
+## Remarque préliminaire
+La base de données originale est riche, beaucoup d'attributs sont disponibles. Pour des raisons arbitraires, la gravité des accidents a été choisie.
+De plus, elle contient des données de 2000 à 2025. Pour des raisons de simplicité et 
+parce que la base de données comporte un attribut "ANNEE" qui permet de filtrer facilement 
+les données par année, nous allons nous concentrer uniquement sur les données de l'année 2024 car 
+c'est la plus récente et la plus complète.
+
 ```{r package_setup, echo = FALSE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
@@ -53,16 +61,21 @@ accident_summary <- accidents_2024 %>%
 
 ```{r summary_stats}
 # Calculate key statistics
-total_deaths <- sum(accidents_2024$TUES, na.rm = TRUE)
-total_injured <- sum(accidents_2024$BLES_LEG, na.rm = TRUE) + sum(accidents_2024$BLES_GRA, na.rm = TRUE)
+
 total_accidents <- nrow(accidents_2024)
+frac_deaths <- sum(accidents_2024$TUES, na.rm = TRUE) / total_accidents
+frac_injured <- sum(accidents_2024$BLES_LEG, na.rm = TRUE) / total_accidents
+frac_severe <- sum(accidents_2024$BLES_GRA, na.rm = TRUE) / total_accidents
 ```
 
 ## Principaux résultats - 2024
 
+En 2024, la répartition de la gravité des accidents a été la suivante:
+
 - **Total des accidents:** `r total_accidents`
-- **Total des décès:** `r total_deaths`
-- **Total des blessés:** `r total_injured`
+- **Fraction de blessés légers:** `r round(frac_injured * 100, 2)`%
+- **Fraction de blessés graves:** `r round(frac_severe * 100, 2)`%
+- **Fraction de décès:** `r round(frac_deaths * 100, 2)`%
 
 ```{r plot_accidents_by_cause, fig.height = 6}
 # Prepare data for vertical bar plot
@@ -87,29 +100,34 @@ ggplot(plot_data, aes(x = CAUSE, y = count, fill = consequence)) +
   ) +
   labs(
     title = "Accidents de la route genevoise en 2024 par cause",
-    x = "Cause de l'accident",
-    y = "Nombre d'accidents",
+    subtitle = "Top 10 des causes d'accidents",
     fill = "Conséquence"
   ) +
   theme_minimal() +
   theme(
     axis.text.x = element_text(size = 8, angle = 45, hjust = 1),
-    axis.text.y = element_text(size = 9),
-    legend.position = "bottom"
+    axis.text.y = element_text(size = 10),
+    axis.title.y = element_blank(),
+    axis.title.x = element_blank(),
+    legend.position = "top"
   )
 ```
 
+Comme nous pouvons le voir, la majorité des accidents sont des accidents simples sans blessés, tandis qu'une fraction plus petite implique des blessures légères ou graves vpir la mort.
+C'est évidemment une excellente nouvelle. Une moins bonne nouvelle est qu'une des causes principales est l'inattention du conducteur.
+Pour la suite, nous allons visualiser la localisation des accidents en fonction de leur gravité pour déterminer s'il existe des zones plus dangereuses que d'autres à Genève.
 ```{r map_accidents_2024}
 # Create map of accident locations with severity coloring
 # Add severity category to accidents_2024
 accidents_2024_severity <- accidents_2024 %>%
   mutate(
     severity = case_when(
-      TUES > 0 | BLES_GRA > 0 ~ "Grave",
+      TUES > 0 ~ "Mortel",
+      BLES_GRA > 0 ~ "Grave",
       BLES_LEG > 0 ~ "Léger",
       TRUE ~ "Simple"
     ),
-    severity = factor(severity, levels = c("Simple", "Léger", "Grave"))
+    severity = factor(severity, levels = c("Simple", "Léger", "Grave", "Mortel"))
   )
 
 # Filter out any geometry issues
@@ -117,20 +135,25 @@ accidents_2024_valid <- accidents_2024_severity[!is.na(st_geometry(accidents_202
 
 # Create the map
 ggplot(accidents_2024_valid) +
-  geom_sf(aes(color = severity), size = 2, alpha = 0.6) +
+  geom_sf(aes(color = severity, shape = severity), size = 2.5, alpha = 0.6) +
   scale_color_manual(
-    values = c("Simple" = "#FFA500", "Léger" = "#FF6B6B", "Grave" = "#8B0000"),
-    labels = c("Simple" = "Accident simple", "Léger" = "Blessures légères", "Grave" = "Grave/Décès")
+    values = c("Simple" = "#FFA500", "Léger" = "#FF6B6B", "Grave" = "#8B0000", "Mortel" = "#000000"),
+    labels = c("Simple" = "Accident simple", "Léger" = "Blessures légères", "Grave" = "Blessures graves", "Mortel" = "Décès")
+  ) +
+  scale_shape_manual(
+    values = c("Simple" = 16, "Léger" = 16, "Grave" = 16, "Mortel" = 4),
+    labels = c("Simple" = "Accident simple", "Léger" = "Blessures légères", "Grave" = "Blessures graves", "Mortel" = "Décès")
   ) +
   labs(
     title = "Localisation des accidents de la route genevoise en 2024",
     subtitle = "Coordonnées CH1903+ / LV95",
-    color = "Gravité"
+    color = "Gravité",
+    shape = "Gravité"
   ) +
   theme_minimal() +
   theme(
-    axis.text = element_text(size = 8),
-    axis.title = element_text(size = 10),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
     legend.position = "bottom",
     panel.grid = element_blank()
   ) +
