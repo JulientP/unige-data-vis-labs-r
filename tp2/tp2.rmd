@@ -131,7 +131,8 @@ ggplot(accidents_2024_valid) +
   theme(
     axis.text = element_text(size = 8),
     axis.title = element_text(size = 10),
-    legend.position = "bottom"
+    legend.position = "bottom",
+    panel.grid = element_blank()
   ) +
   coord_sf()
 ```
